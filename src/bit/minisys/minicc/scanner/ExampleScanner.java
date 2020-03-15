@@ -93,9 +93,8 @@ public class ExampleScanner implements IMiniCCScanner {
 		System.out.println("Scanning...");
 		String strTokens = "";
 		int iTknNum = 0;
-
 		this.srcLines = MiniCCUtil.readFile(iFile);
-        
+        System.out.println(this.srcLines);
         DFA_STATE state = DFA_STATE.DFA_STATE_INITIAL;		//FA state
 		String lexme 	= "";		//token lexme
 		char c 			= ' ';		//next char
