@@ -6,13 +6,13 @@ import java.util.HashSet;
 import java.util.Map;
 
 import bit.minisys.minicc.MiniCCCfg;
-import bit.minisys.minicc.internal.symbol.c;
 import bit.minisys.minicc.internal.util.MiniCCUtil;
 
 public class MyScanner implements IMiniCCScanner {
 
     private int lIndex = 0;
     private int cIndex = 0;
+    private int aCIndex=0;
     private ArrayList<String> srcLines;
     private HashSet<String> keywordSet;
     private Map<Character, String> deliMap = new HashMap<>();
@@ -22,10 +22,9 @@ public class MyScanner implements IMiniCCScanner {
             '`' };
     private char[] cBinaryOp = { '+', '-', '>', '<', '=', '!', '&', '|', '*', '/', '%', '^', '#', ':' };
     private char[] digitSpe = { 'a', 'b', 'c', 'd', 'e', 'f', 'F', 'L', 'l', 'U', 'u', 'x', 'X', 'A', 'B', 'C', 'D',
-            'E', '.' };
+            'E', '.', 'p', 'P', '+', '-' };
 
     // The initial state
-    private int identifierState = 0;
     private int constantState = 0;
     private int operatorState = 0;
     private int charState = 0;
@@ -105,44 +104,57 @@ public class MyScanner implements IMiniCCScanner {
 
     private char getNextChar() {
         char c = Character.MAX_VALUE;
+//        System.out.println(this.srcLines.size()+"hahhah");
         while (true) {
             if (lIndex < this.srcLines.size()) {
                 String line = this.srcLines.get(lIndex);
+//                System.out.println("length="+line.length());
                 if (cIndex < line.length()) {
                     c = line.charAt(cIndex);
+                    aCIndex++;
                     cIndex++;
                     break;
-                } else {
+                } 
+                else if(lIndex==this.srcLines.size()-1)
+                {
+                	System.out.println("aahahahhahahha");
+                	break;
+                }
+                else {
                     lIndex++;
                     cIndex = 0;
+                    aCIndex+=2;
                 }
-            } else {
-                break;
-            }
+            } 
         }
+//        if(c=='\n') System.out.println("huanhangle!!!");
         if (c == '\u001a') {
             c = Character.MAX_VALUE;
         }
         // System.out.println(this.cIndex);
+        
         return c;
     }
 
     private String genToken(int num, String lexme, String type) {
-        // System.out.println(this.cIndex);
-        return genToken(num, lexme, type, this.cIndex - 1, this.lIndex);
+         System.out.println(lexme+"cindex="+this.cIndex);
+        return genToken(num, lexme, type, this.cIndex - 1, this.lIndex); 
     }
 
     private String genToken2(int num, String lexme, String type) {
         return genToken(num, lexme, type, this.cIndex - 2, this.lIndex);
     }
-
+    
     private String genToken(int num, String lexme, String type, int cIndex, int lIndex) {
         String strToken = "";
         // System.out.println(lexme);
         // System.out.println(type);
-        strToken += "[@" + num + "," + (cIndex - lexme.length() + 1) + ":" + cIndex;
+        int indexC=0;
+        if(cIndex==this.cIndex-1) indexC=aCIndex-1;
+        else indexC=aCIndex-2;
+        strToken += "[@" + num + "," + (indexC - lexme.length() + 1) + ":" + indexC;
         strToken += "='" + lexme + "',<" + type + ">," + (lIndex + 1) + ":" + (cIndex - lexme.length() + 1) + "]\n";
-
+        
         return strToken;
     }
 
@@ -161,47 +173,105 @@ public class MyScanner implements IMiniCCScanner {
         // System.out.println("Scanning...");
         while (!end) {
             if (c == Character.MAX_VALUE) {
-                cIndex = 5;
-                strTokens += genToken(iTknNum, "<EOF>", "EOF");
+                cIndex += 5;
+                String lex="'<EOF'";
+//                strTokens += genToken(iTknNum, "<EOF>", "EOF");
+                strTokens+="[@"+iTknNum+","+(aCIndex+1)+":"+aCIndex;
+                strTokens+="="+"'<EOF>'"+","+"<EOF>,"+(lIndex+1)+":"+(cIndex - lex.length() + 1) + "]\n";
                 end = true;
                 break;
             }
             if (!keep)
                 c = getNextChar();
-
+            if (c == Character.MAX_VALUE) {
+            	 cIndex += 5;
+                 String lex="'<EOF'";
+//                 strTokens += genToken(iTknNum, "<EOF>", "EOF");
+                 strTokens+="[@"+iTknNum+","+(aCIndex+1)+":"+aCIndex;
+                 strTokens+="="+"'<EOF>'"+","+"<EOF>,"+(lIndex+1)+":"+(cIndex - lex.length() + 1) + "]\n";
+                 end = true;
+                 break;
+            }
             keep = false;
             // Identifier
             if (isAlpha(c) || c == '_') {
 
-                codeValue = "";
-                while (isAlphaOrDigit(c) || c == '_') {
-                    // System.out.println("这是"+c);
-                    codeValue += c;
-                    c = getNextChar();
-                    if (c == Character.MAX_VALUE) {
-                        end = true;
-                        break;
+                boolean flag = true;
+                while (flag) 
+                {
+                    codeValue = "";
+                    if (c == 'L' || c == 'U') {
+                        codeValue += c;
+                        c = getNextChar();
+                        if (c == '\'') {
+                            charState = -1;
+                            keep=true;
+                            break;
+                            
+                        } else if (c == '\"') {
+                            stringState = -1;
+                            keep=true;
+                            break;
+                        }
+                    } else if (c == 'u') 
+                    {
+                        codeValue += c;
+                        c = getNextChar();
+                        if (c == '\'') {
+                            charState = -1;
+                            keep=true;
+                            break;
+                        } else if (c == '\"') {
+                            stringState =-1;
+                            keep=true;
+                            break;
+                        } else if (c == '8') {
+                        	codeValue += c;
+                            c = getNextChar();
+                            if (c == '\"'){
+                                stringState = -1;
+                                keep=true;
+                                break;
+                            }       
+                        }
                     }
-                }
+                    while (isAlphaOrDigit(c) || c == '_') {
+                        // System.out.println("这是"+c);
+                        codeValue += c;
+                        c = getNextChar();
+                        if (c == Character.MAX_VALUE) {
+                            end = true;
+                            break;
+                        }
+                    }
 
-                if (c != Character.MAX_VALUE)
-                    keep = true;
-                if (this.keywordSet.contains(codeValue)) {
-                    strTokens += genToken(iTknNum, codeValue, "'" + codeValue + "'");
-                    // System.out.println("这是"+c+(c==Character.MAX_VALUE));
-                    System.out.println(strTokens);
-                } else {
-                    strTokens += genToken(iTknNum, codeValue, "Identifier");
+                    if (c != Character.MAX_VALUE)
+                        keep = true;
+                    if (this.keywordSet.contains(codeValue)) {
+                        strTokens += genToken2(iTknNum, codeValue, "'" + codeValue + "'");
+                        // System.out.println("这是"+c+(c==Character.MAX_VALUE));
+//                        System.out.println(strTokens);
+                    } else {
+                        strTokens += genToken2(iTknNum, codeValue, "Identifier");
+                    }
+                    iTknNum++;
+                    break;
                 }
-                iTknNum++;
             }
-            // Constant!
+            // Constant
             else if (isDigit(c)) {
                 constantState = 0;
                 codeValue = "";
+                // while (isDigit(c) || isHave(digitSpe, c))
+                // {
+                // System.out.println("c="+c);
+                // c=getNextChar();
+                // }
                 while (isDigit(c) || isHave(digitSpe, c)) {
                     codeValue += c;
                     // System.out.println(codeValue);
+                    // System.out.println(codeValue);
+                    // System.out.println('c'+"is"+c+isHave(digitSpe, c));
                     if (constantState == 0) {
                         if (c == '0')
                             constantState = 2;
@@ -259,6 +329,8 @@ public class MyScanner implements IMiniCCScanner {
                             constantState = 13;
                         else if (c == '.')
                             constantState = 17;
+                        else if (c == 'p' || c == 'P')
+                            constantState = 18;
                         else
                             constantState = -1;
                     } else if (constantState == 7) {
@@ -313,27 +385,47 @@ public class MyScanner implements IMiniCCScanner {
                     } else if (constantState == 16) {
                         constantState = -1;
                     } else if (constantState == 17) {
-                        if(isDigit(c)||(c>='a'&&c<='f')||(c>='A'&&c<='F'))
-                            constantState =18;
-                        else if(c=='F'||c=='f') constantState =10;
-                        else if(c=='L'||c=='l') constantState=11;
-                        else constantState=-1;
+                        if (isDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))
+                            constantState = 18;
+
+                        else
+                            constantState = -1;
                     } else if (constantState == -1) {
-                        continue;
+                        break;
+                    } else if (constantState == 18) {
+                        if (c == 'p' || c == 'P')
+                            constantState = 19;
+                        else if (isDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))
+                            constantState = 18;
+                        else if (c == 'F' || c == 'f')
+                            constantState = 10;
+                        else if (c == 'L' || c == 'l')
+                            constantState = 11;
+                        else
+                            constantState = -1;
+                    } else if (constantState == 19) {
+                        if (c == '+' || c == '-')
+                            constantState = 20;
+                        else if (c == '0' || c == '1')
+                            constantState = 19;
+                        else if (c == 'F' || c == 'f')
+                            constantState = 10;
+                        else if (c == 'L' || c == 'l')
+                            constantState = 11;
+                        else
+                            constantState = -1;
+                    } else if (constantState == 20) {
+                        if (c == '0' || c == '1')
+                            constantState = 19;
+                        else
+                            constantState = -1;
                     }
-                    else if(constantState==18)
-                    {
-                        if(c=='p'||c=='P') constantState=19;
-                        if(isDigit(c)||(c>='a'&&c<='f')||(c>='A'&&c<='F')) constantState=18;
-                        else constantState=-1;
-                    }
-                    else if(constantState==19)
-                    {
-                        if(c=='+'||c=='-') 
-                    }
+                    // System.out.println("current state"+constantState);
                     c = getNextChar();
+                    // System.out.println("ok"+(c == Character.MAX_VALUE));
+                    // System.out.println("c is"+c);
                     if (c == Character.MAX_VALUE)
-                        end = true;
+                        break;
                 }
                 if (c != Character.MAX_VALUE)
                     keep = true;
@@ -341,25 +433,48 @@ public class MyScanner implements IMiniCCScanner {
                     strTokens += genToken2(iTknNum, codeValue, "numeric_onstant");
                     iTknNum++;
                 } else {
-                    System.out.println("[ERROR]Scanner:line " + lIndex + ", column=" + cIndex + ", unreachable state!");
+                    System.out
+                            .println("[ERROR]Scanner:line " + lIndex + ", column=" + cIndex + ", unreachable state!\n");
                 }
             }
             // Character
             else if (c == '\'') {
-                charState = 1;
-                codeValue = "";
+                if (charState == 0)
+                    codeValue = "";
+                if(charState==-1)
+                {
+                	charState=0;
+                }
                 while (c != Character.MAX_VALUE) {
+//                     System.out.println("state"+charState+codeValue);
                     codeValue += c;
-                    if (charState == 1) {
+                     System.out.println(codeValue);
+                    if (charState == 0) 
+                    {
+                        if (c == '\'')
+                            charState = 1;
+                    } 
+                    else if (charState == 1) 
+                    {
                         if (c == '\\')
                             charState = 2;
-                        else if (c == '\'')
+                        else if (c == '\'') 
+                        {
                             charState = 3;
-                    } else if (charState == 2) {
-                        if (isHave(sepChar, c)) {
+                            break;
+                        }
+                    } else if (charState == 2) 
+                    {
+                        if (isHave(sepChar, c)) 
+                        {
                             charState = 1;
                         }
-                    } else if (charState == 3) {
+                        else if(isDigit(c))
+                        {
+                        	charState=1;
+                        }
+                    } else if (charState == 3) 
+                    {
                         break;
                     }
                     c = getNextChar();
@@ -368,37 +483,53 @@ public class MyScanner implements IMiniCCScanner {
                     strTokens += genToken2(iTknNum, codeValue, "char_constant");
                     iTknNum++;
                 }
+                charState = 0;
             }
             // String
             else if (c == '\"') {
-                stringState = 1;
+                if(stringState==0)
                 codeValue = "";
+                if(stringState==-1)
+                {
+                	stringState=0;
+                }
                 while (c != Character.MAX_VALUE) {
                     codeValue += c;
-                    if (constantState == 1) {
+//                    System.out.println(codeValue+" "+stringState);
+                    if(stringState==0)
+                    {
+                        if (c == '\"')
+                            stringState = 1;
+                    }
+                    else if (stringState == 1) {
                         if (c == '\\')
-                            charState = 2;
+                            stringState= 2;
                         else if (c == '\"')
-                            charState = 3;
-                    } else if (charState == 2) {
+                            {
+                                stringState = 3;
+                                break;
+                            }
+                    } else if (stringState == 2) {
                         if (isHave(sepChar, c)) {
-                            charState = 1;
+                            stringState = 1;
                         }
                     } else if (charState == 3) {
                         break;
                     }
                     c = getNextChar();
                 }
-                if (charState == 3) {
+                if (stringState== 3) {
                     strTokens += genToken2(iTknNum, codeValue, "string_literal");
                     iTknNum++;
                 }
+                stringState = 0;
             }
             // Delimiter
             else if (isHave(delimiter, c)) {
                 codeValue = "";
                 codeValue += c;
-                strTokens += genToken2(iTknNum, codeValue, deliMap.get(c));
+                strTokens += genToken(iTknNum, codeValue, deliMap.get(c));
+                iTknNum++;
             }
             // Operator
             else if (isHave(cOperator, c)) {
@@ -447,7 +578,7 @@ public class MyScanner implements IMiniCCScanner {
                         } else
                             operatorState = -1;
                     } else if (operatorState == 4) {
-                        if (c == '-' || c == '=') {
+                        if (c == '-' || c == '=' || c == '>') {
                             operatorState = 19;
                             break;
                         } else
@@ -554,10 +685,18 @@ public class MyScanner implements IMiniCCScanner {
                         break;
                     c = getNextChar();
                 }
-                if (operatorState == 19) {
-                    strTokens += genToken2(iTknNum, codeValue, "Multivariate operator");
+                if (!isHave(cOperator, c))
+                    keep = true;
+                if (operatorState == 19&&isHave(cOperator, c)) {
+                    strTokens += genToken(iTknNum, codeValue, "Multivariate operator");
                     iTknNum++;
-                } else if (operatorState == -1) {
+                } 
+                else if(operatorState==19&&!isHave(cOperator, c))
+                {
+                	 strTokens += genToken2(iTknNum, codeValue, "Multivariate operator");
+                     iTknNum++;
+                }
+                else if (operatorState == -1) {
                     System.out.println("[ERROR]Scanner:line " + lIndex + ", column=" + cIndex + ", unreachable state!");
                 } else {
                     strTokens += genToken2(iTknNum, codeValue, "Unary operator");
@@ -567,7 +706,7 @@ public class MyScanner implements IMiniCCScanner {
         }
         String oFile = MiniCCUtil.removeAllExt(iFile) + MiniCCCfg.MINICC_SCANNER_OUTPUT_EXT;
         MiniCCUtil.createAndWriteFile(oFile, strTokens);
-        System.out.println(strTokens);
+//        System.out.println(strTokens);
         return oFile;
     }
 }
