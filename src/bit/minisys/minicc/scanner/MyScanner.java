@@ -117,7 +117,6 @@ public class MyScanner implements IMiniCCScanner {
                 } 
                 else if(lIndex==this.srcLines.size()-1)
                 {
-                	System.out.println("aahahahhahahha");
                 	break;
                 }
                 else {
@@ -137,7 +136,7 @@ public class MyScanner implements IMiniCCScanner {
     }
 
     private String genToken(int num, String lexme, String type) {
-         System.out.println(lexme+"cindex="+this.cIndex);
+//         System.out.println(lexme+"cindex="+this.cIndex);
         return genToken(num, lexme, type, this.cIndex - 1, this.lIndex); 
     }
 
@@ -448,7 +447,7 @@ public class MyScanner implements IMiniCCScanner {
                 while (c != Character.MAX_VALUE) {
 //                     System.out.println("state"+charState+codeValue);
                     codeValue += c;
-                     System.out.println(codeValue);
+//                     System.out.println(codeValue);
                     if (charState == 0) 
                     {
                         if (c == '\'')
