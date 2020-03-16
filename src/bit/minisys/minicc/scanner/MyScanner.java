@@ -429,7 +429,7 @@ public class MyScanner implements IMiniCCScanner {
                 if (c != Character.MAX_VALUE)
                     keep = true;
                 if (constantState != -1) {
-                    strTokens += genToken2(iTknNum, codeValue, "numeric_onstant");
+                    strTokens += genToken2(iTknNum, codeValue, "Numeric_constant");
                     iTknNum++;
                 } else {
                     System.out
@@ -479,7 +479,7 @@ public class MyScanner implements IMiniCCScanner {
                     c = getNextChar();
                 }
                 if (charState == 3) {
-                    strTokens += genToken2(iTknNum, codeValue, "char_constant");
+                    strTokens += genToken2(iTknNum, codeValue, "Char_constant");
                     iTknNum++;
                 }
                 charState = 0;
@@ -518,7 +518,7 @@ public class MyScanner implements IMiniCCScanner {
                     c = getNextChar();
                 }
                 if (stringState== 3) {
-                    strTokens += genToken2(iTknNum, codeValue, "string_literal");
+                    strTokens += genToken2(iTknNum, codeValue, "String_literal");
                     iTknNum++;
                 }
                 stringState = 0;
